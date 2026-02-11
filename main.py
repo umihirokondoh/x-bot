@@ -3,6 +3,7 @@ import sqlite3
 import requests
 import tweepy
 import random
+import re
 
 # 設定
 DB_PATH = "posted.db"
@@ -56,7 +57,7 @@ def main():
         tweet_fields=["text", "created_at"]
     )
 
-    if not response.data:
+    if not response or not response.data:
         print("ツイートが見つかりませんでした。")
         return
 
@@ -66,37 +67,3 @@ def main():
     # 2. 画像付き かつ 未投稿 のツイートを抽出
     candidates = []
     for t in response.data:
-        if is_already_posted(str(t.id)):
-            continue
-        
-        attachments = getattr(t, 'attachments', None)
-        if attachments and "media_keys" in attachments:
-            m_key = attachments["media_keys"][0]
-            media = media_map.get(m_key)
-            if media and media.type == "photo" and hasattr(media, 'url'):
-                candidates.append({"id": t.id, "text": t.text, "url": media.url})
-
-    if not candidates:
-        print("投稿可能な新しい画像ツイートがありません。")
-        return
-
-    # 3. ランダムに1つ選択
-    target = random.choice(candidates)
-    print(f"投稿対象: {target['id']}")
-
-    # 4. 画像をダウンロードしてアップロード(v1.1)
-    img_res = requests.get(target['url'])
-    with open("temp.jpg", "wb") as f:
-        f.write(img_res.content)
-    
-    media = api_v1.media_upload(filename="temp.jpg")
-
-    # 5. 新規ツイートとして投稿(v2)
-    client_v2.create_tweet(text=target['text'], media_ids=[media.media_id])
-    
-    # 6. DBに記録
-    mark_as_posted(str(target['id']))
-    print("投稿が完了しました。")
-
-if __name__ == "__main__":
-    main()
