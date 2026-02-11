@@ -20,6 +20,7 @@ jobs:
       - run: ls -R .
       - run: pip install -r requirements.txt
 
+      - run: ls -R .
       - run: python main.py
         env:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
